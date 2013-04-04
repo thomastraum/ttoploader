@@ -18,3 +18,5 @@ npm-debug.log
 *.png
 *.gif
 node_modules
+.DS_Store
+public/uploads/*
