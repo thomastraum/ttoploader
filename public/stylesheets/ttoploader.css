@@ -1,0 +1,17 @@
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+#drop {
+	width: 300px;
+	height: 300px;
+	border: 1px dotted #ddd;
+}
+#drop.over {
+	border: 3px dotted #ddd;
+}

@@ -1,0 +1,21 @@
+{
+  "name": "ttoploader",
+  "dependencies": {
+    "component/emitter": "*",
+    "component/classes": "*",
+    "component/upload": "*",
+    "component/events": "*",
+    "component/dropload": "*",
+    "component/jquery":"*"
+  },
+  
+  "scripts": [
+    "public/javascripts/ttoploader.js"
+  ],
+  
+  "styles": [
+    "public/stylesheets/ttoploader.css"
+  ],
+
+  "main": "public/javascripts/ttoploader.js"
+}
