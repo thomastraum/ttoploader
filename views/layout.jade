@@ -3,9 +3,9 @@ html
 	head
 		title= title
 		link(rel='stylesheet', href='/build.css')
-		//- link(rel='stylesheet', href='/stylesheets/dropzone.css')
 	body
-		block content
+		div(id='drop')
+			block content
 		script(src="/build.js")
 		script
 			require('ttoploader')

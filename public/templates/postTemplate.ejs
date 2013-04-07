@@ -1,0 +1,23 @@
+
+<div class="span6 post">
+	<div class="thumbnail">
+		<img src=<%= image.cdnUri + '/preview_' + image.files[0] %> />
+	</div>
+	<p>
+		<%= body %>
+	</p>
+	<p><small>
+		<% 
+			var date=new Date(createdAt);
+			var curr_date = date.getDate();
+			var curr_month = date.getMonth() + 1; //Months are zero based
+			var curr_year = date.getFullYear(); 
+			var hour = date.getHours();
+			var minute = date.getMinutes();
+			var seconds = date.getSeconds();
+
+			var datestr = curr_date + "-" + curr_month + "-" + curr_year + " " + hour + ":" + minute + ":" + seconds;
+		%>
+		<%=datestr %>
+	</small></p>
+</div>

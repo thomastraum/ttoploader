@@ -5,17 +5,21 @@
     "component/classes": "*",
     "component/upload": "*",
     "component/events": "*",
-    "component/dropload": "*",
-    "component/jquery":"*"
+    "component/jquery": "*",
+    "CamShaft/bootstrap-grid": "*",
+    "CamShaft/bootstrap-type": "*",
+    "btknorr/ejs/": "*",
+    "btknorr/ejs": "*",
+    "thomastraum/dropload": "*",
+    "component-dialog": "*",
+    "component/dialog": "*",
+    "component/overlay": "*"
   },
-  
   "scripts": [
     "public/javascripts/ttoploader.js"
   ],
-  
   "styles": [
     "public/stylesheets/ttoploader.css"
   ],
-
   "main": "public/javascripts/ttoploader.js"
 }

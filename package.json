@@ -8,6 +8,11 @@
   "dependencies": {
     "express": "3.x",
     "jade": "*",
-    "connect-form":"*"
+    "imager":"latest",
+    "mongoose":"latest",
+    "connect-flash": "latest",
+    "connect-form":"*",
+    "async":"latest",
+    "underscore":"latest"
   }
 }

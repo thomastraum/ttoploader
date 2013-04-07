@@ -13,7 +13,8 @@
     "component/emitter": "*",
     "component/classes": "*",
     "component/upload": "*",
-    "component/events": "*"
+    "component/events": "*",
+    "component/dialog": "*"
   },
   "development": {},
   "scripts": [

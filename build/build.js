@@ -880,157 +880,6 @@ module.exports = function(target, obj){
 };
 
 });
-require.register("component-dropload/index.js", function(exports, require, module){
-
-/**
- * Module dependencies.
- */
-
-var Emitter = require('emitter')
-  , classes = require('classes')
-  , Upload = require('upload')
-  , events = require('events')
-
-/**
- * Expose `Dropload`.
- */
-
-module.exports = Dropload;
-
-/**
- * Types.
- */
-
-var typeMap = {
-  'text/plain': 'text',
-  'text/uri-list': 'url',
-  'text/html': 'html'
-};
-
-/**
- * Initialize a drop point
- * on the given `el`.
- *
- * Emits:
- *
- *   - `error` on validation error
- *   - `upload` passing an `Upload`
- *
- * @param {Element} el
- * @api public
- */
-
-function Dropload(el) {
-  if (!(this instanceof Dropload)) return new Dropload(el);
-  Emitter.call(this);
-  this.el = el;
-  this.classes = classes(el);
-  this.events = events(el, this);
-  this.events.bind('drop');
-  this.events.bind('dragenter');
-  this.events.bind('dragleave');
-  this.events.bind('dragover');
-}
-
-/**
- * Mixin emitter.
- */
-
-Emitter(Dropload.prototype);
-
-/**
- * Unbind event handlers.
- *
- * @api public
- */
-
-Dropload.prototype.unbind = function(){
-  this.events.unbind();
-};
-
-/**
- * Dragenter handler.
- */
-
-Dropload.prototype.ondragenter = function(e){
-  this.classes.add('over');
-};
-
-/**
- * Dragover handler.
- */
-
-Dropload.prototype.ondragover = function(e){
-  e.preventDefault();
-};
-
-/**
- * Dragleave handler.
- */
-
-Dropload.prototype.ondragleave = function(e){
-  this.classes.remove('over');
-};
-
-/**
- * Drop handler.
- */
-
-Dropload.prototype.ondrop = function(e){
-  e.stopPropagation();
-  e.preventDefault();
-  this.classes.remove('over');
-  var items = e.dataTransfer.items;
-  if (items) this.drop(items);
-  this.upload(e.dataTransfer.files);
-};
-
-/**
- * Handle the given `items`.
- *
- * @param {DataTransferItemList}
- * @api private
- */
-
-Dropload.prototype.drop = function(items){
-  for (var i = 0; i < items.length; i++) {
-    this.dropItem(items[i]);
-  }
-};
-
-/**
- * Handle `item`.
- *
- * @param {Object} item
- * @api private
- */
-
-Dropload.prototype.dropItem = function(item){
-  var self = this;
-  var type = typeMap[item.type];
-  item.getAsString(function(str){
-    self.emit(type, str, item);
-  });
-};
-
-/**
- * Upload the given `files`.
- *
- * Presents each `file` in the FileList
- * as an `Upload` via the "upload" event
- * after it has been validated.
- *
- * @param {FileList} files
- * @api public
- */
-
-Dropload.prototype.upload = function(files){
-  for (var i = 0; i < files.length; i++) {
-    this.emit('upload', new Upload(files[i]));
-  }
-};
-
-});
 require.register("component-jquery/index.js", function(exports, require, module){
 /*!
  * jQuery JavaScript Library v1.9.1
@@ -10635,19 +10484,2772 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 })( window );
 
 });
+
+
+require.register("gamestop-superagent/lib/client.js", function(exports, require, module){
+
+/**
+ * Module dependencies.
+ */
+
+var Emitter = require('emitter');
+
+/**
+ * Root reference for iframes.
+ */
+
+var root = 'undefined' == typeof window
+    ? this
+    : window;
+
+/**
+ * Noop.
+ */
+
+function noop(){};
+
+/**
+ * Determine XHR.
+ */
+
+function getXHR() {
+    if (root.XMLHttpRequest
+        && ('file:' != root.location.protocol || !root.ActiveXObject)) {
+        return new XMLHttpRequest;
+    } else {
+        try { return new ActiveXObject('Microsoft.XMLHTTP'); } catch(e) {}
+        try { return new ActiveXObject('Msxml2.XMLHTTP.6.0'); } catch(e) {}
+        try { return new ActiveXObject('Msxml2.XMLHTTP.3.0'); } catch(e) {}
+        try { return new ActiveXObject('Msxml2.XMLHTTP'); } catch(e) {}
+        try { return Ti.Network.createHTTPClient(); } catch(e) {}
+    }
+    return false;
+}
+
+/**
+ * Removes leading and trailing whitespace, added to support IE.
+ *
+ * @param {String} s
+ * @return {String}
+ * @api private
+ */
+
+var trim = ''.trim
+    ? function(s) { return s.trim(); }
+    : function(s) { return s.replace(/(^\s*|\s*$)/g, ''); };
+
+/**
+ * Check if `obj` is an object.
+ *
+ * @param {Object} obj
+ * @return {Boolean}
+ * @api private
+ */
+
+function isObject(obj) {
+    return obj === Object(obj);
+}
+
+/**
+ * Serialize the given `obj`.
+ *
+ * @param {Object} obj
+ * @return {String}
+ * @api private
+ */
+
+function serialize(obj) {
+    if (!isObject(obj)) return obj;
+    var pairs = [];
+    for (var key in obj) {
+        pairs.push(encodeURIComponent(key)
+            + '=' + encodeURIComponent(obj[key]));
+    }
+    return pairs.join('&');
+}
+
+/**
+ * Expose serialization method.
+ */
+
+request.serializeObject = serialize;
+
+/**
+ * Parse the given x-www-form-urlencoded `str`.
+ *
+ * @param {String} str
+ * @return {Object}
+ * @api private
+ */
+
+function parseString(str) {
+    var obj = {};
+    var pairs = str.split('&');
+    var parts;
+    var pair;
+
+    for (var i = 0, len = pairs.length; i < len; ++i) {
+        pair = pairs[i];
+        parts = pair.split('=');
+        obj[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1]);
+    }
+
+    return obj;
+}
+
+/**
+ * Expose parser.
+ */
+
+request.parseString = parseString;
+
+/**
+ * Default MIME type map.
+ *
+ *     superagent.types.xml = 'application/xml';
+ *
+ */
+
+request.types = {
+    html: 'text/html',
+    json: 'application/json',
+    urlencoded: 'application/x-www-form-urlencoded',
+    'form': 'application/x-www-form-urlencoded',
+    'form-data': 'application/x-www-form-urlencoded'
+};
+
+/**
+ * Default serialization map.
+ *
+ *     superagent.serialize['application/xml'] = function(obj){
+ *       return 'generated xml here';
+ *     };
+ *
+ */
+
+request.serialize = {
+    'application/x-www-form-urlencoded': serialize,
+    'application/json': JSON.stringify
+};
+
+/**
+ * Default parsers.
+ *
+ *     superagent.parse['application/xml'] = function(str){
+  *       return { object parsed from str };
+  *     };
+ *
+ */
+
+request.parse = {
+    'application/x-www-form-urlencoded': parseString,
+    'application/json': JSON.parse
+};
+
+/**
+ * Parse the given header `str` into
+ * an object containing the mapped fields.
+ *
+ * @param {String} str
+ * @return {Object}
+ * @api private
+ */
+
+function parseHeader(str) {
+    if (typeof str === 'object') {
+        for(prop in str) {
+            if(str.hasOwnProperty(prop)) {
+                var val = str[prop];
+                delete str[prop];
+                str[prop.toLowerCase()] = val;
+            }
+        }
+        return str;
+    }
+    var lines = str.split(/\r?\n/);
+    var fields = {};
+    var index;
+    var line;
+    var field;
+    var val;
+
+    lines.pop(); // trailing CRLF
+
+    for (var i = 0, len = lines.length; i < len; ++i) {
+        line = lines[i];
+        index = line.indexOf(':');
+        field = line.slice(0, index).toLowerCase();
+        val = trim(line.slice(index + 1));
+        fields[field] = val;
+    }
+
+    return fields;
+}
+
+/**
+ * Return the mime type for the given `str`.
+ *
+ * @param {String} str
+ * @return {String}
+ * @api private
+ */
+
+function type(str){
+    return str.split(/ *; */).shift();
+};
+
+/**
+ * Return header field parameters.
+ *
+ * @param {String} str
+ * @return {Object}
+ * @api private
+ */
+
+function params(str){
+    return str.split(/ *; */).reduce(function(obj, str){
+        var parts = str.split(/ *= */)
+            , key = parts.shift()
+            , val = parts.shift();
+
+        if (key && val) obj[key] = val;
+        return obj;
+    }, {});
+};
+
+/**
+ * Initialize a new `Response` with the given `xhr`.
+ *
+ *  - set flags (.ok, .error, etc)
+ *  - parse header
+ *
+ * Examples:
+ *
+ *  Aliasing `superagent` as `request` is nice:
+ *
+ *      request = superagent;
+ *
+ *  We can use the promise-like API, or pass callbacks:
+ *
+ *      request.get('/').end(function(res){});
+ *      request.get('/', function(res){});
+ *
+ *  Sending data can be chained:
+ *
+ *      request
+ *        .post('/user')
+ *        .send({ name: 'tj' })
+ *        .end(function(res){});
+ *
+ *  Or passed to `.send()`:
+ *
+ *      request
+ *        .post('/user')
+ *        .send({ name: 'tj' }, function(res){});
+ *
+ *  Or passed to `.post()`:
+ *
+ *      request
+ *        .post('/user', { name: 'tj' })
+ *        .end(function(res){});
+ *
+ * Or further reduced to a single call for simple cases:
+ *
+ *      request
+ *        .post('/user', { name: 'tj' }, function(res){});
+ *
+ * @param {XMLHTTPRequest} xhr
+ * @param {Object} options
+ * @api private
+ */
+
+function Response(xhr, options) {
+    options = options || {};
+    this.xhr = xhr;
+    this.text = xhr.responseText;
+    this.setStatusProperties(xhr.status);
+    this.header = parseHeader(xhr.getAllResponseHeaders()||xhr.responseHeaders||'');
+    this.setHeaderProperties(this.header);
+    this.body = this.parseBody(this.text);
+}
+
+/**
+ * Set header related properties:
+ *
+ *   - `.type` the content type without params
+ *
+ * A response of "Content-Type: text/plain; charset=utf-8"
+ * will provide you with a `.type` of "text/plain".
+ *
+ * @param {Object} header
+ * @api private
+ */
+
+Response.prototype.setHeaderProperties = function(header){
+    // content-type
+    var ct = this.header['content-type'] || '';
+    this.type = type(ct);
+
+    // params
+    var obj = params(ct);
+    for (var key in obj) this[key] = obj[key];
+};
+
+/**
+ * Parse the given body `str`.
+ *
+ * Used for auto-parsing of bodies. Parsers
+ * are defined on the `superagent.parse` object.
+ *
+ * @param {String} str
+ * @return {Mixed}
+ * @api private
+ */
+
+Response.prototype.parseBody = function(str){
+    var parse = request.parse[this.type];
+    return parse
+        ? parse(str)
+        : null;
+};
+
+/**
+ * Set flags such as `.ok` based on `status`.
+ *
+ * For example a 2xx response will give you a `.ok` of __true__
+ * whereas 5xx will be __false__ and `.error` will be __true__. The
+ * `.clientError` and `.serverError` are also available to be more
+ * specific, and `.statusType` is the class of error ranging from 1..5
+ * sometimes useful for mapping respond colors etc.
+ *
+ * "sugar" properties are also defined for common cases. Currently providing:
+ *
+ *   - .noContent
+ *   - .badRequest
+ *   - .unauthorized
+ *   - .notAcceptable
+ *   - .notFound
+ *
+ * @param {Number} status
+ * @api private
+ */
+
+Response.prototype.setStatusProperties = function(status){
+    var type = status / 100 | 0;
+
+    // status / class
+    this.status = status;
+    this.statusType = type;
+
+    // basics
+    this.info = 1 == type;
+    this.ok = 2 == type;
+    this.clientError = 4 == type;
+    this.serverError = 5 == type;
+    this.error = 4 == type || 5 == type;
+
+    // sugar
+    this.accepted = 202 == status;
+    this.noContent = 204 == status || 1223 == status;
+    this.badRequest = 400 == status;
+    this.unauthorized = 401 == status;
+    this.notAcceptable = 406 == status;
+    this.notFound = 404 == status;
+    this.forbidden = 403 == status;
+};
+
+/**
+ * Expose `Response`.
+ */
+
+request.Response = Response;
+
+/**
+ * Initialize a new `Request` with the given `method` and `url`.
+ *
+ * @param {String} method
+ * @param {String} url
+ * @api public
+ */
+
+function Request(method, url) {
+    var self = this;
+    Emitter.call(this);
+    this.method = method;
+    this.url = url;
+    this.header = {};
+    this.isAsync = true;
+    this.set('X-Requested-With', 'XMLHttpRequest');
+    this.on('end', function(){
+        self.callback(new Response(self.xhr));
+    });
+}
+
+/**
+ * Inherit from `Emitter.prototype`.
+ */
+
+Request.prototype = new Emitter;
+Request.prototype.constructor = Request;
+
+/**
+ * Abort the request.
+ *
+ * @return {Request}
+ * @api public
+ */
+
+Request.prototype.abort = function(){
+    if (this.aborted) return;
+    this.xhr.abort();
+    this.emit('abort');
+    this.aborted = true;
+    return this;
+};
+
+/**
+ * Set header `field` to `val`, or multiple fields with one object.
+ *
+ * Examples:
+ *
+ *      req.get('/')
+ *        .set('Accept', 'application/json')
+ *        .set('X-API-Key', 'foobar')
+ *        .end(callback);
+ *
+ *      req.get('/')
+ *        .set({ Accept: 'application/json', 'X-API-Key': 'foobar' })
+ *        .end(callback);
+ *
+ * @param {String|Object} field
+ * @param {String} val
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.set = function(field, val){
+    if (isObject(field)) {
+        for (var key in field) {
+            this.set(key, field[key]);
+        }
+        return this;
+    }
+    this.header[field.toLowerCase()] = val;
+    return this;
+};
+
+Request.prototype.async = function(isAsync){
+    this.isAsync = isAsync;
+    return this;
+};
+
+/**
+ * Set Content-Type to `type`, mapping values from `request.types`.
+ *
+ * Examples:
+ *
+ *      superagent.types.xml = 'application/xml';
+ *
+ *      request.post('/')
+ *        .type('xml')
+ *        .send(xmlstring)
+ *        .end(callback);
+ *
+ *      request.post('/')
+ *        .type('application/xml')
+ *        .send(xmlstring)
+ *        .end(callback);
+ *
+ * @param {String} type
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.type = function(type){
+    this.set('Content-Type', request.types[type] || type);
+    return this;
+};
+
+/**
+ * Add `obj` to the query-string, later formatted
+ * in `.end()`.
+ *
+ * @param {Object} obj
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.query = function(obj){
+    this._query = this._query || {};
+    for (var key in obj) {
+        this._query[key] = obj[key];
+    }
+    return this;
+};
+
+/**
+ * Send `data`, defaulting the `.type()` to "json" when
+ * an object is given.
+ *
+ * Examples:
+ *
+ *       // querystring
+ *       request.get('/search')
+ *         .end(callback)
+ *
+ *       // multiple data "writes"
+ *       request.get('/search')
+ *         .send({ search: 'query' })
+ *         .send({ range: '1..5' })
+ *         .send({ order: 'desc' })
+ *         .end(callback)
+ *
+ *       // manual json
+ *       request.post('/user')
+ *         .type('json')
+ *         .send('{"name":"tj"})
+ *         .end(callback)
+ *
+ *       // auto json
+ *       request.post('/user')
+ *         .send({ name: 'tj' })
+ *         .end(callback)
+ *
+ *       // manual x-www-form-urlencoded
+ *       request.post('/user')
+ *         .type('form')
+ *         .send('name=tj')
+ *         .end(callback)
+ *
+ *       // auto x-www-form-urlencoded
+ *       request.post('/user')
+ *         .type('form')
+ *         .send({ name: 'tj' })
+ *         .end(callback)
+ *
+ *       // defaults to x-www-form-urlencoded
+ *      request.post('/user')
+ *        .send('name=tobi')
+ *        .send('species=ferret')
+ *        .end(callback)
+ *
+ * @param {String|Object} data
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.send = function(data){
+    var obj = isObject(data);
+    var type = this.header['content-type'];
+
+    // merge
+    if (obj && isObject(this._data)) {
+        for (var key in data) {
+            this._data[key] = data[key];
+        }
+    } else if ('string' == typeof data) {
+        if (!type) this.type('form');
+        type = this.header['content-type'];
+        if ('application/x-www-form-urlencoded' == type) {
+            this._data = this._data
+                ? this._data + '&' + data
+                : data;
+        } else {
+            this._data = (this._data || '') + data;
+        }
+    } else {
+        this._data = data;
+    }
+
+    if (!obj) return this;
+    if (!type) this.type('json');
+    return this;
+};
+
+/**
+ * Initiate request, invoking callback `fn(res)`
+ * with an instanceof `Response`.
+ *
+ * @param {Function} fn
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.end = function(fn){
+    if(typeof(Titanium) != undefined && this.url.indexOf('file://') == 0) {
+        //If Titanium and file url
+        var file = Ti.Filesystem.getFile(this.url.slice(7 /* strlen("file://") */));
+        var blob = file && file.read();
+        var result = { 
+            status: (blob && blob.text) ? 200 : 404, 
+            text: (blob && blob.text) 
+        };
+        file = null;    // dispose of file handle & blob.
+        blob = null;
+        if(this.isAsync) {
+            setTimeout(function() { fn(result) }, 0);
+        }
+        return result;
+    }
+
+    var self = this;
+    var xhr = this.xhr = getXHR();
+    var query = this._query;
+    var data = this._data;
+
+    // store callback
+    this.callback = fn || noop;
+
+    // state change
+    var hasAlreadyEnded = false;  //Workaround for Titanium bug when sometimes onreadystatechange gets called multiple times w/ the same status code
+    xhr.onreadystatechange = function(){
+        if (4 == xhr.readyState && !hasAlreadyEnded) {
+            hasAlreadyEnded = true;
+            self.emit('end');
+        }
+    };
+
+    if (typeof(Titanium) != undefined) {
+        xhr.onerror = function() {
+            if(!hasAlreadyEnded) {
+                hasAlreadyEnded = true;
+                self.emit('end');
+            }
+        };
+    }
+
+    // querystring
+    if (query) {
+        query = request.serializeObject(query);
+        this.url += ~this.url.indexOf('?')
+            ? '&' + query
+            : '?' + query;
+    }
+
+    // initiate request
+    xhr.open(this.method, this.url, this.isAsync);
+
+    // body
+    if ('GET' != this.method && 'HEAD' != this.method && 'string' != typeof data) {
+        // serialize stuff
+        var serialize = request.serialize[this.header['content-type']];
+        if (serialize) data = serialize(data);
+    }
+
+    // set header fields
+    for (var field in this.header) {
+        xhr.setRequestHeader(field, this.header[field]);
+    }
+
+    // send stuff
+    xhr.send(data);
+    return this.isAsync ? this : new Response(xhr);
+};
+
+/**
+ * Expose `Request`.
+ */
+
+request.Request = Request;
+
+/**
+ * Issue a request:
+ *
+ * Examples:
+ *
+ *    request('GET', '/users').end(callback)
+ *    request('/users').end(callback)
+ *    request('/users', callback)
+ *
+ * @param {String} method
+ * @param {String|Function} url or callback
+ * @return {Request}
+ * @api public
+ */
+
+function request(method, url) {
+    // callback
+    if ('function' == typeof url) {
+        return new Request('GET', method).end(url);
+    }
+
+    // url first
+    if (1 == arguments.length) {
+        return new Request('GET', method);
+    }
+
+    return new Request(method, url);
+}
+
+/**
+ * GET `url` with optional callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Mixed|Function} data or fn
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.get = function(url, data, fn){
+    var req = request('GET', url);
+    if ('function' == typeof data) fn = data, data = null;
+    if (data) req.query(data);
+    if (fn) req.end(fn);
+    return req;
+};
+
+/**
+ * GET `url` with optional callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Mixed|Function} data or fn
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.head = function(url, data, fn){
+    var req = request('HEAD', url);
+    if ('function' == typeof data) fn = data, data = null;
+    if (data) req.send(data);
+    if (fn) req.end(fn);
+    return req;
+};
+
+/**
+ * DELETE `url` with optional callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.del = function(url, fn){
+    var req = request('DELETE', url);
+    if (fn) req.end(fn);
+    return req;
+};
+
+/**
+ * PATCH `url` with optional `data` and callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Mixed} data
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.patch = function(url, data, fn){
+    var req = request('PATCH', url);
+    if ('function' == typeof data) fn = data, data = null;
+    if (data) req.send(data);
+    if (fn) req.end(fn);
+    return req;
+};
+
+/**
+ * POST `url` with optional `data` and callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Mixed} data
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.post = function(url, data, fn){
+    var req = request('POST', url);
+    if ('function' == typeof data) fn = data, data = null;
+    if (data) req.send(data);
+    if (fn) req.end(fn);
+    return req;
+};
+
+/**
+ * PUT `url` with optional `data` and callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Mixed|Function} data or fn
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.put = function(url, data, fn){
+    var req = request('PUT', url);
+    if ('function' == typeof data) fn = data, data = null;
+    if (data) req.send(data);
+    if (fn) req.end(fn);
+    return req;
+};
+
+/**
+ * Expose `request`.
+ */
+
+module.exports = request;
+});
+require.register("component-domify/index.js", function(exports, require, module){
+
+/**
+ * Expose `parse`.
+ */
+
+module.exports = parse;
+
+/**
+ * Wrap map from jquery.
+ */
+
+var map = {
+  option: [1, '<select multiple="multiple">', '</select>'],
+  optgroup: [1, '<select multiple="multiple">', '</select>'],
+  legend: [1, '<fieldset>', '</fieldset>'],
+  thead: [1, '<table>', '</table>'],
+  tbody: [1, '<table>', '</table>'],
+  tfoot: [1, '<table>', '</table>'],
+  colgroup: [1, '<table>', '</table>'],
+  caption: [1, '<table>', '</table>'],
+  tr: [2, '<table><tbody>', '</tbody></table>'],
+  td: [3, '<table><tbody><tr>', '</tr></tbody></table>'],
+  th: [3, '<table><tbody><tr>', '</tr></tbody></table>'],
+  col: [2, '<table><tbody></tbody><colgroup>', '</colgroup></table>'],
+  _default: [0, '', '']
+};
+
+/**
+ * Parse `html` and return the children.
+ *
+ * @param {String} html
+ * @return {Array}
+ * @api private
+ */
+
+function parse(html) {
+  if ('string' != typeof html) throw new TypeError('String expected');
+  
+  // tag name
+  var m = /<([\w:]+)/.exec(html);
+  if (!m) throw new Error('No elements were generated.');
+  var tag = m[1];
+  
+  // body support
+  if (tag == 'body') {
+    var el = document.createElement('html');
+    el.innerHTML = html;
+    return [el.removeChild(el.lastChild)];
+  }
+  
+  // wrap map
+  var wrap = map[tag] || map._default;
+  var depth = wrap[0];
+  var prefix = wrap[1];
+  var suffix = wrap[2];
+  var el = document.createElement('div');
+  el.innerHTML = prefix + html + suffix;
+  while (depth--) el = el.lastChild;
+
+  return orphan(el.children);
+}
+
+/**
+ * Orphan `els` and return an array.
+ *
+ * @param {NodeList} els
+ * @return {Array}
+ * @api private
+ */
+
+function orphan(els) {
+  var ret = [];
+
+  while (els.length) {
+    ret.push(els[0].parentNode.removeChild(els[0]));
+  }
+
+  return ret;
+}
+
+});
+require.register("btknorr-ejs//client.js", function(exports, require, module){
+var ejs = require('./ejs');
+var request = require('superagent');
+var domify = require('domify');
+
+var client = {
+    pathPrefix:'',
+    ejsExtension:'.ejs'
+};
+var cache = {};
+
+var renderFromCache = function(fullPath, locals) {
+    return ejs.render(cache[fullPath], locals);
+};
+
+client.render = function(file, locals, callback) {
+    if (typeof locals === 'function') {
+        callback = locals;
+        locals = {};
+    }
+
+    var fullPath = client.pathPrefix+file+client.ejsExtension;
+    if (cache[fullPath]) {
+        var rendered = renderFromCache(fullPath, locals);
+        return callback && callback(null, rendered) || rendered;
+    }
+    if (callback) {
+        return request.get(fullPath, function(res) {
+            if (res.status !== 200) {
+                return callback(res);
+            }
+            cache[fullPath] = res.text;
+            return callback(null, renderFromCache(fullPath, locals));
+        });
+    }
+    var res = request.get(fullPath).async(false).end();
+    if (res.status !== 200) {
+        return new Error('Failed to load '+fullPath);
+    }
+    cache[fullPath] = res.text;
+    return renderFromCache(fullPath,locals);
+};
+
+client.domify = function(file, locals, callback) {
+    if (typeof locals === 'function' || callback) {
+        return client.render(file, locals, function(err, html) {
+            if (err) {
+                return callback(err);
+            }
+            return callback(null, domify(html)[0]);
+        });
+    }
+    var html = client.render(file, locals, callback);
+    if (html instanceof Error) {
+        return html;
+    }
+    return domify(html)[0];
+};
+
+client.clearCache = function() {
+    cache = {};
+};
+
+module.exports = client;
+});
+require.register("btknorr-ejs//ejs.js", function(exports, require, module){
+module.exports = (function(){
+
+// CommonJS require()
+
+function require(p){
+    if ('fs' == p) return {};
+    var path = require.resolve(p)
+      , mod = require.modules[path];
+    if (!mod) throw new Error('failed to require "' + p + '"');
+    if (!mod.exports) {
+      mod.exports = {};
+      mod.call(mod.exports, mod, mod.exports, require.relative(path));
+    }
+    return mod.exports;
+  }
+
+require.modules = {};
+
+require.resolve = function (path){
+    var orig = path
+      , reg = path + '.js'
+      , index = path + '/index.js';
+    return require.modules[reg] && reg
+      || require.modules[index] && index
+      || orig;
+  };
+
+require.register = function (path, fn){
+    require.modules[path] = fn;
+  };
+
+require.relative = function (parent) {
+    return function(p){
+      if ('.' != p.substr(0, 1)) return require(p);
+      
+      var path = parent.split('/')
+        , segs = p.split('/');
+      path.pop();
+      
+      for (var i = 0; i < segs.length; i++) {
+        var seg = segs[i];
+        if ('..' == seg) path.pop();
+        else if ('.' != seg) path.push(seg);
+      }
+
+      return require(path.join('/'));
+    };
+  };
+
+
+require.register("ejs.js", function(module, exports, require){
+
+/*!
+ * EJS
+ * Copyright(c) 2012 TJ Holowaychuk <tj@vision-media.ca>
+ * MIT Licensed
+ */
+
+/**
+ * Module dependencies.
+ */
+
+var utils = require('./utils')
+  , fs = require('fs');
+
+/**
+ * Library version.
+ */
+
+exports.version = '0.7.2';
+
+/**
+ * Filters.
+ * 
+ * @type Object
+ */
+
+var filters = exports.filters = require('./filters');
+
+/**
+ * Intermediate js cache.
+ * 
+ * @type Object
+ */
+
+var cache = {};
+
+/**
+ * Clear intermediate js cache.
+ *
+ * @api public
+ */
+
+exports.clearCache = function(){
+  cache = {};
+};
+
+/**
+ * Translate filtered code into function calls.
+ *
+ * @param {String} js
+ * @return {String}
+ * @api private
+ */
+
+function filtered(js) {
+  return js.substr(1).split('|').reduce(function(js, filter){
+    var parts = filter.split(':')
+      , name = parts.shift()
+      , args = parts.shift() || '';
+    if (args) args = ', ' + args;
+    return 'filters.' + name + '(' + js + args + ')';
+  });
+};
+
+/**
+ * Re-throw the given `err` in context to the
+ * `str` of ejs, `filename`, and `lineno`.
+ *
+ * @param {Error} err
+ * @param {String} str
+ * @param {String} filename
+ * @param {String} lineno
+ * @api private
+ */
+
+function rethrow(err, str, filename, lineno){
+  var lines = str.split('\n')
+    , start = Math.max(lineno - 3, 0)
+    , end = Math.min(lines.length, lineno + 3);
+
+  // Error context
+  var context = lines.slice(start, end).map(function(line, i){
+    var curr = i + start + 1;
+    return (curr == lineno ? ' >> ' : '    ')
+      + curr
+      + '| '
+      + line;
+  }).join('\n');
+
+  // Alter exception message
+  err.path = filename;
+  err.message = (filename || 'ejs') + ':' 
+    + lineno + '\n' 
+    + context + '\n\n' 
+    + err.message;
+  
+  throw err;
+}
+
+/**
+ * Parse the given `str` of ejs, returning the function body.
+ *
+ * @param {String} str
+ * @return {String}
+ * @api public
+ */
+
+var parse = exports.parse = function(str, options){
+  var options = options || {}
+    , open = options.open || exports.open || '<%'
+    , close = options.close || exports.close || '%>';
+
+  var buf = [
+      "var buf = [];"
+    , "\nwith (locals) {"
+    , "\n  buf.push('"
+  ];
+  
+  var lineno = 1;
+
+  var consumeEOL = false;
+  for (var i = 0, len = str.length; i < len; ++i) {
+    if (str.slice(i, open.length + i) == open) {
+      i += open.length
+  
+      var prefix, postfix, line = '__stack.lineno=' + lineno;
+      switch (str.substr(i, 1)) {
+        case '=':
+          prefix = "', escape((" + line + ', ';
+          postfix = ")), '";
+          ++i;
+          break;
+        case '-':
+          prefix = "', (" + line + ', ';
+          postfix = "), '";
+          ++i;
+          break;
+        default:
+          prefix = "');" + line + ';';
+          postfix = "; buf.push('";
+      }
+
+      var end = str.indexOf(close, i)
+        , js = str.substring(i, end)
+        , start = i
+        , n = 0;
+        
+      if ('-' == js[js.length-1]){
+        js = js.substring(0, js.length - 2);
+        consumeEOL = true;
+      }
+        
+      while (~(n = js.indexOf("\n", n))) n++, lineno++;
+      if (js.substr(0, 1) == ':') js = filtered(js);
+      buf.push(prefix, js, postfix);
+      i += end - start + close.length - 1;
+
+    } else if (str.substr(i, 1) == "\\") {
+      buf.push("\\\\");
+    } else if (str.substr(i, 1) == "'") {
+      buf.push("\\'");
+    } else if (str.substr(i, 1) == "\r") {
+      buf.push(" ");
+    } else if (str.substr(i, 1) == "\n") {
+      if (consumeEOL) {
+        consumeEOL = false;
+      } else {
+        buf.push("\\n");
+        lineno++;
+      }
+    } else {
+      buf.push(str.substr(i, 1));
+    }
+  }
+
+  buf.push("');\n}\nreturn buf.join('');");
+  return buf.join('');
+};
+
+/**
+ * Compile the given `str` of ejs into a `Function`.
+ *
+ * @param {String} str
+ * @param {Object} options
+ * @return {Function}
+ * @api public
+ */
+
+var compile = exports.compile = function(str, options){
+  options = options || {};
+  
+  var input = JSON.stringify(str)
+    , filename = options.filename
+        ? JSON.stringify(options.filename)
+        : 'undefined';
+  
+  // Adds the fancy stack trace meta info
+  str = [
+    'var __stack = { lineno: 1, input: ' + input + ', filename: ' + filename + ' };',
+    rethrow.toString(),
+    'try {',
+    exports.parse(str, options),
+    '} catch (err) {',
+    '  rethrow(err, __stack.input, __stack.filename, __stack.lineno);',
+    '}'
+  ].join("\n");
+  
+  if (options.debug) console.log(str);
+  var fn = new Function('locals, filters, escape', str);
+  return function(locals){
+    return fn.call(this, locals, filters, utils.escape);
+  }
+};
+
+/**
+ * Render the given `str` of ejs.
+ *
+ * Options:
+ *
+ *   - `locals`          Local variables object
+ *   - `cache`           Compiled functions are cached, requires `filename`
+ *   - `filename`        Used by `cache` to key caches
+ *   - `scope`           Function execution context
+ *   - `debug`           Output generated function body
+ *   - `open`            Open tag, defaulting to "<%"
+ *   - `close`           Closing tag, defaulting to "%>"
+ *
+ * @param {String} str
+ * @param {Object} options
+ * @return {String}
+ * @api public
+ */
+
+exports.render = function(str, options){
+  var fn
+    , options = options || {};
+
+  if (options.cache) {
+    if (options.filename) {
+      fn = cache[options.filename] || (cache[options.filename] = compile(str, options));
+    } else {
+      throw new Error('"cache" option requires "filename".');
+    }
+  } else {
+    fn = compile(str, options);
+  }
+
+  options.__proto__ = options.locals;
+  return fn.call(options.scope, options);
+};
+
+/**
+ * Render an EJS file at the given `path` and callback `fn(err, str)`.
+ *
+ * @param {String} path
+ * @param {Object|Function} options or callback
+ * @param {Function} fn
+ * @api public
+ */
+
+exports.renderFile = function(path, options, fn){
+  var key = path + ':string';
+
+  if ('function' == typeof options) {
+    fn = options, options = {};
+  }
+
+  options.filename = path;
+
+  try {
+    var str = options.cache
+      ? cache[key] || (cache[key] = fs.readFileSync(path, 'utf8'))
+      : fs.readFileSync(path, 'utf8');
+
+    fn(null, exports.render(str, options));
+  } catch (err) {
+    fn(err);
+  }
+};
+
+// express support
+
+exports.__express = exports.renderFile;
+
+/**
+ * Expose to require().
+ */
+
+if (require.extensions) {
+  require.extensions['.ejs'] = function(module, filename) {
+    source = require('fs').readFileSync(filename, 'utf-8');
+    module._compile(compile(source, {}), filename);
+  };
+} else if (require.registerExtension) {
+  require.registerExtension('.ejs', function(src) {
+    return compile(src, {});
+  });
+}
+
+}); // module: ejs.js
+
+require.register("filters.js", function(module, exports, require){
+
+/*!
+ * EJS - Filters
+ * Copyright(c) 2010 TJ Holowaychuk <tj@vision-media.ca>
+ * MIT Licensed
+ */
+
+/**
+ * First element of the target `obj`.
+ */
+
+exports.first = function(obj) {
+  return obj[0];
+};
+
+/**
+ * Last element of the target `obj`.
+ */
+
+exports.last = function(obj) {
+  return obj[obj.length - 1];
+};
+
+/**
+ * Capitalize the first letter of the target `str`.
+ */
+
+exports.capitalize = function(str){
+  str = String(str);
+  return str[0].toUpperCase() + str.substr(1, str.length);
+};
+
+/**
+ * Downcase the target `str`.
+ */
+
+exports.downcase = function(str){
+  return String(str).toLowerCase();
+};
+
+/**
+ * Uppercase the target `str`.
+ */
+
+exports.upcase = function(str){
+  return String(str).toUpperCase();
+};
+
+/**
+ * Sort the target `obj`.
+ */
+
+exports.sort = function(obj){
+  return Object.create(obj).sort();
+};
+
+/**
+ * Sort the target `obj` by the given `prop` ascending.
+ */
+
+exports.sort_by = function(obj, prop){
+  return Object.create(obj).sort(function(a, b){
+    a = a[prop], b = b[prop];
+    if (a > b) return 1;
+    if (a < b) return -1;
+    return 0;
+  });
+};
+
+/**
+ * Size or length of the target `obj`.
+ */
+
+exports.size = exports.length = function(obj) {
+  return obj.length;
+};
+
+/**
+ * Add `a` and `b`.
+ */
+
+exports.plus = function(a, b){
+  return Number(a) + Number(b);
+};
+
+/**
+ * Subtract `b` from `a`.
+ */
+
+exports.minus = function(a, b){
+  return Number(a) - Number(b);
+};
+
+/**
+ * Multiply `a` by `b`.
+ */
+
+exports.times = function(a, b){
+  return Number(a) * Number(b);
+};
+
+/**
+ * Divide `a` by `b`.
+ */
+
+exports.divided_by = function(a, b){
+  return Number(a) / Number(b);
+};
+
+/**
+ * Join `obj` with the given `str`.
+ */
+
+exports.join = function(obj, str){
+  return obj.join(str || ', ');
+};
+
+/**
+ * Truncate `str` to `len`.
+ */
+
+exports.truncate = function(str, len){
+  str = String(str);
+  return str.substr(0, len);
+};
+
+/**
+ * Truncate `str` to `n` words.
+ */
+
+exports.truncate_words = function(str, n){
+  var str = String(str)
+    , words = str.split(/ +/);
+  return words.slice(0, n).join(' ');
+};
+
+/**
+ * Replace `pattern` with `substitution` in `str`.
+ */
+
+exports.replace = function(str, pattern, substitution){
+  return String(str).replace(pattern, substitution || '');
+};
+
+/**
+ * Prepend `val` to `obj`.
+ */
+
+exports.prepend = function(obj, val){
+  return Array.isArray(obj)
+    ? [val].concat(obj)
+    : val + obj;
+};
+
+/**
+ * Append `val` to `obj`.
+ */
+
+exports.append = function(obj, val){
+  return Array.isArray(obj)
+    ? obj.concat(val)
+    : obj + val;
+};
+
+/**
+ * Map the given `prop`.
+ */
+
+exports.map = function(arr, prop){
+  return arr.map(function(obj){
+    return obj[prop];
+  });
+};
+
+/**
+ * Reverse the given `obj`.
+ */
+
+exports.reverse = function(obj){
+  return Array.isArray(obj)
+    ? obj.reverse()
+    : String(obj).split('').reverse().join('');
+};
+
+/**
+ * Get `prop` of the given `obj`.
+ */
+
+exports.get = function(obj, prop){
+  return obj[prop];
+};
+
+/**
+ * Packs the given `obj` into json string
+ */
+exports.json = function(obj){
+  return JSON.stringify(obj);
+};
+}); // module: filters.js
+
+require.register("utils.js", function(module, exports, require){
+
+/*!
+ * EJS
+ * Copyright(c) 2010 TJ Holowaychuk <tj@vision-media.ca>
+ * MIT Licensed
+ */
+
+/**
+ * Escape the given string of `html`.
+ *
+ * @param {String} html
+ * @return {String}
+ * @api private
+ */
+
+exports.escape = function(html){
+  return String(html)
+    .replace(/&(?!\w+;)/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+};
+ 
+}); // module: utils.js
+
+ return require("ejs");
+})();
+});
+require.register("btknorr-ejs/client.js", function(exports, require, module){
+var ejs = require('./ejs');
+var request = require('superagent');
+var domify = require('domify');
+
+var client = {
+    pathPrefix:'',
+    ejsExtension:'.ejs'
+};
+var cache = {};
+
+var renderFromCache = function(fullPath, locals) {
+    return ejs.render(cache[fullPath], locals);
+};
+
+client.render = function(file, locals, callback) {
+    if (typeof locals === 'function') {
+        callback = locals;
+        locals = {};
+    }
+
+    var fullPath = client.pathPrefix+file+client.ejsExtension;
+    if (cache[fullPath]) {
+        var rendered = renderFromCache(fullPath, locals);
+        return callback && callback(null, rendered) || rendered;
+    }
+    if (callback) {
+        return request.get(fullPath, function(res) {
+            if (res.status !== 200) {
+                return callback(res);
+            }
+            cache[fullPath] = res.text;
+            return callback(null, renderFromCache(fullPath, locals));
+        });
+    }
+    var res = request.get(fullPath).async(false).end();
+    if (res.status !== 200) {
+        return new Error('Failed to load '+fullPath);
+    }
+    cache[fullPath] = res.text;
+    return renderFromCache(fullPath,locals);
+};
+
+client.domify = function(file, locals, callback) {
+    if (typeof locals === 'function' || callback) {
+        return client.render(file, locals, function(err, html) {
+            if (err) {
+                return callback(err);
+            }
+            return callback(null, domify(html)[0]);
+        });
+    }
+    var html = client.render(file, locals, callback);
+    if (html instanceof Error) {
+        return html;
+    }
+    return domify(html)[0];
+};
+
+client.clearCache = function() {
+    cache = {};
+};
+
+module.exports = client;
+});
+require.register("btknorr-ejs/ejs.js", function(exports, require, module){
+module.exports = (function(){
+
+// CommonJS require()
+
+function require(p){
+    if ('fs' == p) return {};
+    var path = require.resolve(p)
+      , mod = require.modules[path];
+    if (!mod) throw new Error('failed to require "' + p + '"');
+    if (!mod.exports) {
+      mod.exports = {};
+      mod.call(mod.exports, mod, mod.exports, require.relative(path));
+    }
+    return mod.exports;
+  }
+
+require.modules = {};
+
+require.resolve = function (path){
+    var orig = path
+      , reg = path + '.js'
+      , index = path + '/index.js';
+    return require.modules[reg] && reg
+      || require.modules[index] && index
+      || orig;
+  };
+
+require.register = function (path, fn){
+    require.modules[path] = fn;
+  };
+
+require.relative = function (parent) {
+    return function(p){
+      if ('.' != p.substr(0, 1)) return require(p);
+      
+      var path = parent.split('/')
+        , segs = p.split('/');
+      path.pop();
+      
+      for (var i = 0; i < segs.length; i++) {
+        var seg = segs[i];
+        if ('..' == seg) path.pop();
+        else if ('.' != seg) path.push(seg);
+      }
+
+      return require(path.join('/'));
+    };
+  };
+
+
+require.register("ejs.js", function(module, exports, require){
+
+/*!
+ * EJS
+ * Copyright(c) 2012 TJ Holowaychuk <tj@vision-media.ca>
+ * MIT Licensed
+ */
+
+/**
+ * Module dependencies.
+ */
+
+var utils = require('./utils')
+  , fs = require('fs');
+
+/**
+ * Library version.
+ */
+
+exports.version = '0.7.2';
+
+/**
+ * Filters.
+ * 
+ * @type Object
+ */
+
+var filters = exports.filters = require('./filters');
+
+/**
+ * Intermediate js cache.
+ * 
+ * @type Object
+ */
+
+var cache = {};
+
+/**
+ * Clear intermediate js cache.
+ *
+ * @api public
+ */
+
+exports.clearCache = function(){
+  cache = {};
+};
+
+/**
+ * Translate filtered code into function calls.
+ *
+ * @param {String} js
+ * @return {String}
+ * @api private
+ */
+
+function filtered(js) {
+  return js.substr(1).split('|').reduce(function(js, filter){
+    var parts = filter.split(':')
+      , name = parts.shift()
+      , args = parts.shift() || '';
+    if (args) args = ', ' + args;
+    return 'filters.' + name + '(' + js + args + ')';
+  });
+};
+
+/**
+ * Re-throw the given `err` in context to the
+ * `str` of ejs, `filename`, and `lineno`.
+ *
+ * @param {Error} err
+ * @param {String} str
+ * @param {String} filename
+ * @param {String} lineno
+ * @api private
+ */
+
+function rethrow(err, str, filename, lineno){
+  var lines = str.split('\n')
+    , start = Math.max(lineno - 3, 0)
+    , end = Math.min(lines.length, lineno + 3);
+
+  // Error context
+  var context = lines.slice(start, end).map(function(line, i){
+    var curr = i + start + 1;
+    return (curr == lineno ? ' >> ' : '    ')
+      + curr
+      + '| '
+      + line;
+  }).join('\n');
+
+  // Alter exception message
+  err.path = filename;
+  err.message = (filename || 'ejs') + ':' 
+    + lineno + '\n' 
+    + context + '\n\n' 
+    + err.message;
+  
+  throw err;
+}
+
+/**
+ * Parse the given `str` of ejs, returning the function body.
+ *
+ * @param {String} str
+ * @return {String}
+ * @api public
+ */
+
+var parse = exports.parse = function(str, options){
+  var options = options || {}
+    , open = options.open || exports.open || '<%'
+    , close = options.close || exports.close || '%>';
+
+  var buf = [
+      "var buf = [];"
+    , "\nwith (locals) {"
+    , "\n  buf.push('"
+  ];
+  
+  var lineno = 1;
+
+  var consumeEOL = false;
+  for (var i = 0, len = str.length; i < len; ++i) {
+    if (str.slice(i, open.length + i) == open) {
+      i += open.length
+  
+      var prefix, postfix, line = '__stack.lineno=' + lineno;
+      switch (str.substr(i, 1)) {
+        case '=':
+          prefix = "', escape((" + line + ', ';
+          postfix = ")), '";
+          ++i;
+          break;
+        case '-':
+          prefix = "', (" + line + ', ';
+          postfix = "), '";
+          ++i;
+          break;
+        default:
+          prefix = "');" + line + ';';
+          postfix = "; buf.push('";
+      }
+
+      var end = str.indexOf(close, i)
+        , js = str.substring(i, end)
+        , start = i
+        , n = 0;
+        
+      if ('-' == js[js.length-1]){
+        js = js.substring(0, js.length - 2);
+        consumeEOL = true;
+      }
+        
+      while (~(n = js.indexOf("\n", n))) n++, lineno++;
+      if (js.substr(0, 1) == ':') js = filtered(js);
+      buf.push(prefix, js, postfix);
+      i += end - start + close.length - 1;
+
+    } else if (str.substr(i, 1) == "\\") {
+      buf.push("\\\\");
+    } else if (str.substr(i, 1) == "'") {
+      buf.push("\\'");
+    } else if (str.substr(i, 1) == "\r") {
+      buf.push(" ");
+    } else if (str.substr(i, 1) == "\n") {
+      if (consumeEOL) {
+        consumeEOL = false;
+      } else {
+        buf.push("\\n");
+        lineno++;
+      }
+    } else {
+      buf.push(str.substr(i, 1));
+    }
+  }
+
+  buf.push("');\n}\nreturn buf.join('');");
+  return buf.join('');
+};
+
+/**
+ * Compile the given `str` of ejs into a `Function`.
+ *
+ * @param {String} str
+ * @param {Object} options
+ * @return {Function}
+ * @api public
+ */
+
+var compile = exports.compile = function(str, options){
+  options = options || {};
+  
+  var input = JSON.stringify(str)
+    , filename = options.filename
+        ? JSON.stringify(options.filename)
+        : 'undefined';
+  
+  // Adds the fancy stack trace meta info
+  str = [
+    'var __stack = { lineno: 1, input: ' + input + ', filename: ' + filename + ' };',
+    rethrow.toString(),
+    'try {',
+    exports.parse(str, options),
+    '} catch (err) {',
+    '  rethrow(err, __stack.input, __stack.filename, __stack.lineno);',
+    '}'
+  ].join("\n");
+  
+  if (options.debug) console.log(str);
+  var fn = new Function('locals, filters, escape', str);
+  return function(locals){
+    return fn.call(this, locals, filters, utils.escape);
+  }
+};
+
+/**
+ * Render the given `str` of ejs.
+ *
+ * Options:
+ *
+ *   - `locals`          Local variables object
+ *   - `cache`           Compiled functions are cached, requires `filename`
+ *   - `filename`        Used by `cache` to key caches
+ *   - `scope`           Function execution context
+ *   - `debug`           Output generated function body
+ *   - `open`            Open tag, defaulting to "<%"
+ *   - `close`           Closing tag, defaulting to "%>"
+ *
+ * @param {String} str
+ * @param {Object} options
+ * @return {String}
+ * @api public
+ */
+
+exports.render = function(str, options){
+  var fn
+    , options = options || {};
+
+  if (options.cache) {
+    if (options.filename) {
+      fn = cache[options.filename] || (cache[options.filename] = compile(str, options));
+    } else {
+      throw new Error('"cache" option requires "filename".');
+    }
+  } else {
+    fn = compile(str, options);
+  }
+
+  options.__proto__ = options.locals;
+  return fn.call(options.scope, options);
+};
+
+/**
+ * Render an EJS file at the given `path` and callback `fn(err, str)`.
+ *
+ * @param {String} path
+ * @param {Object|Function} options or callback
+ * @param {Function} fn
+ * @api public
+ */
+
+exports.renderFile = function(path, options, fn){
+  var key = path + ':string';
+
+  if ('function' == typeof options) {
+    fn = options, options = {};
+  }
+
+  options.filename = path;
+
+  try {
+    var str = options.cache
+      ? cache[key] || (cache[key] = fs.readFileSync(path, 'utf8'))
+      : fs.readFileSync(path, 'utf8');
+
+    fn(null, exports.render(str, options));
+  } catch (err) {
+    fn(err);
+  }
+};
+
+// express support
+
+exports.__express = exports.renderFile;
+
+/**
+ * Expose to require().
+ */
+
+if (require.extensions) {
+  require.extensions['.ejs'] = function(module, filename) {
+    source = require('fs').readFileSync(filename, 'utf-8');
+    module._compile(compile(source, {}), filename);
+  };
+} else if (require.registerExtension) {
+  require.registerExtension('.ejs', function(src) {
+    return compile(src, {});
+  });
+}
+
+}); // module: ejs.js
+
+require.register("filters.js", function(module, exports, require){
+
+/*!
+ * EJS - Filters
+ * Copyright(c) 2010 TJ Holowaychuk <tj@vision-media.ca>
+ * MIT Licensed
+ */
+
+/**
+ * First element of the target `obj`.
+ */
+
+exports.first = function(obj) {
+  return obj[0];
+};
+
+/**
+ * Last element of the target `obj`.
+ */
+
+exports.last = function(obj) {
+  return obj[obj.length - 1];
+};
+
+/**
+ * Capitalize the first letter of the target `str`.
+ */
+
+exports.capitalize = function(str){
+  str = String(str);
+  return str[0].toUpperCase() + str.substr(1, str.length);
+};
+
+/**
+ * Downcase the target `str`.
+ */
+
+exports.downcase = function(str){
+  return String(str).toLowerCase();
+};
+
+/**
+ * Uppercase the target `str`.
+ */
+
+exports.upcase = function(str){
+  return String(str).toUpperCase();
+};
+
+/**
+ * Sort the target `obj`.
+ */
+
+exports.sort = function(obj){
+  return Object.create(obj).sort();
+};
+
+/**
+ * Sort the target `obj` by the given `prop` ascending.
+ */
+
+exports.sort_by = function(obj, prop){
+  return Object.create(obj).sort(function(a, b){
+    a = a[prop], b = b[prop];
+    if (a > b) return 1;
+    if (a < b) return -1;
+    return 0;
+  });
+};
+
+/**
+ * Size or length of the target `obj`.
+ */
+
+exports.size = exports.length = function(obj) {
+  return obj.length;
+};
+
+/**
+ * Add `a` and `b`.
+ */
+
+exports.plus = function(a, b){
+  return Number(a) + Number(b);
+};
+
+/**
+ * Subtract `b` from `a`.
+ */
+
+exports.minus = function(a, b){
+  return Number(a) - Number(b);
+};
+
+/**
+ * Multiply `a` by `b`.
+ */
+
+exports.times = function(a, b){
+  return Number(a) * Number(b);
+};
+
+/**
+ * Divide `a` by `b`.
+ */
+
+exports.divided_by = function(a, b){
+  return Number(a) / Number(b);
+};
+
+/**
+ * Join `obj` with the given `str`.
+ */
+
+exports.join = function(obj, str){
+  return obj.join(str || ', ');
+};
+
+/**
+ * Truncate `str` to `len`.
+ */
+
+exports.truncate = function(str, len){
+  str = String(str);
+  return str.substr(0, len);
+};
+
+/**
+ * Truncate `str` to `n` words.
+ */
+
+exports.truncate_words = function(str, n){
+  var str = String(str)
+    , words = str.split(/ +/);
+  return words.slice(0, n).join(' ');
+};
+
+/**
+ * Replace `pattern` with `substitution` in `str`.
+ */
+
+exports.replace = function(str, pattern, substitution){
+  return String(str).replace(pattern, substitution || '');
+};
+
+/**
+ * Prepend `val` to `obj`.
+ */
+
+exports.prepend = function(obj, val){
+  return Array.isArray(obj)
+    ? [val].concat(obj)
+    : val + obj;
+};
+
+/**
+ * Append `val` to `obj`.
+ */
+
+exports.append = function(obj, val){
+  return Array.isArray(obj)
+    ? obj.concat(val)
+    : obj + val;
+};
+
+/**
+ * Map the given `prop`.
+ */
+
+exports.map = function(arr, prop){
+  return arr.map(function(obj){
+    return obj[prop];
+  });
+};
+
+/**
+ * Reverse the given `obj`.
+ */
+
+exports.reverse = function(obj){
+  return Array.isArray(obj)
+    ? obj.reverse()
+    : String(obj).split('').reverse().join('');
+};
+
+/**
+ * Get `prop` of the given `obj`.
+ */
+
+exports.get = function(obj, prop){
+  return obj[prop];
+};
+
+/**
+ * Packs the given `obj` into json string
+ */
+exports.json = function(obj){
+  return JSON.stringify(obj);
+};
+}); // module: filters.js
+
+require.register("utils.js", function(module, exports, require){
+
+/*!
+ * EJS
+ * Copyright(c) 2010 TJ Holowaychuk <tj@vision-media.ca>
+ * MIT Licensed
+ */
+
+/**
+ * Escape the given string of `html`.
+ *
+ * @param {String} html
+ * @return {String}
+ * @api private
+ */
+
+exports.escape = function(html){
+  return String(html)
+    .replace(/&(?!\w+;)/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+};
+ 
+}); // module: utils.js
+
+ return require("ejs");
+})();
+});
+require.register("thomastraum-dropload/index.js", function(exports, require, module){
+
+/**
+ * Module dependencies.
+ */
+
+var Emitter = require('emitter')
+  , classes = require('classes')
+  , Upload = require('upload')
+  , events = require('events')
+
+/**
+ * Expose `Dropload`.
+ */
+
+module.exports = Dropload;
+
+/**
+ * Types.
+ */
+
+var typeMap = {
+  'text/plain': 'text',
+  'text/uri-list': 'url',
+  'text/html': 'html'
+};
+
+/**
+ * Initialize a drop point
+ * on the given `el`.
+ *
+ * Emits:
+ *
+ *   - `error` on validation error
+ *   - `upload` passing an `Upload`
+ *
+ * @param {Element} el
+ * @api public
+ */
+
+function Dropload(el) {
+  if (!(this instanceof Dropload)) return new Dropload(el);
+  Emitter.call(this);
+  this.el = el;
+  this.classes = classes(el);
+  this.events = events(el, this);
+  this.events.bind('drop');
+  this.events.bind('dragenter');
+  this.events.bind('dragleave');
+  this.events.bind('dragover');
+}
+
+/**
+ * Mixin emitter.
+ */
+
+Emitter(Dropload.prototype);
+
+/**
+ * Unbind event handlers.
+ *
+ * @api public
+ */
+
+Dropload.prototype.unbind = function(){
+  this.events.unbind();
+};
+
+/**
+ * Dragenter handler.
+ */
+
+Dropload.prototype.ondragenter = function(e){
+  this.classes.add('over');
+};
+
+/**
+ * Dragover handler.
+ */
+
+Dropload.prototype.ondragover = function(e){
+  this.classes.add('over');
+  e.preventDefault();
+};
+
+/**
+ * Dragleave handler.
+ */
+
+Dropload.prototype.ondragleave = function(e){
+  this.classes.remove('over');
+};
+
+/**
+ * Drop handler.
+ */
+
+Dropload.prototype.ondrop = function(e){
+  e.stopPropagation();
+  e.preventDefault();
+  this.classes.remove('over');
+  var items = e.dataTransfer.items;
+  if (items) this.drop(items);
+  this.upload(e.dataTransfer.files);
+};
+
+/**
+ * Handle the given `items`.
+ *
+ * @param {DataTransferItemList}
+ * @api private
+ */
+
+Dropload.prototype.drop = function(items){
+  for (var i = 0; i < items.length; i++) {
+    this.dropItem(items[i]);
+  }
+};
+
+/**
+ * Handle `item`.
+ *
+ * @param {Object} item
+ * @api private
+ */
+
+Dropload.prototype.dropItem = function(item){
+  var self = this;
+  var type = typeMap[item.type];
+  item.getAsString(function(str){
+    self.emit(type, str, item);
+  });
+};
+
+/**
+ * Upload the given `files`.
+ *
+ * Presents each `file` in the FileList
+ * as an `Upload` via the "upload" event
+ * after it has been validated.
+ *
+ * @param {FileList} files
+ * @api public
+ */
+
+Dropload.prototype.upload = function(files){
+  for (var i = 0; i < files.length; i++) {
+    this.emit('upload', new Upload(files[i]));
+  }
+};
+
+});
+require.register("component-dialog/index.js", function(exports, require, module){
+
+/**
+ * Module dependencies.
+ */
+
+var Emitter = require('emitter')
+  , overlay = require('overlay')
+  , o = require('jquery');
+
+/**
+ * Active dialog.
+ */
+
+var active;
+
+/**
+ * Expose `dialog()`.
+ */
+
+exports = module.exports = dialog;
+
+/**
+ * Expose `Dialog`.
+ */
+
+exports.Dialog = Dialog;
+
+/**
+ * Return a new `Dialog` with the given 
+ * (optional) `title` and `msg`.
+ *
+ * @param {String} title or msg
+ * @param {String} msg
+ * @return {Dialog}
+ * @api public
+ */
+
+function dialog(title, msg){
+  switch (arguments.length) {
+    case 2:
+      return new Dialog({ title: title, message: msg });
+    case 1:
+      return new Dialog({ message: title });
+  }
+};
+
+/**
+ * Initialize a new `Dialog`.
+ *
+ * Options:
+ *
+ *    - `title` dialog title
+ *    - `message` a message to display
+ *
+ * Emits:
+ *
+ *    - `show` when visible
+ *    - `hide` when hidden
+ *
+ * @param {Object} options
+ * @api public
+ */
+
+function Dialog(options) {
+  Emitter.call(this);
+  options = options || {};
+  this.template = require('./template');
+  this.el = o(this.template);
+  this.render(options);
+  if (active && !active.hiding) active.hide();
+  if (exports.effect) this.effect(exports.effect);
+  this.on('escape', this.hide.bind(this));
+  active = this;
+};
+
+/**
+ * Inherit from `Emitter.prototype`.
+ */
+
+Dialog.prototype = new Emitter;
+
+/**
+ * Render with the given `options`.
+ *
+ * @param {Object} options
+ * @api public
+ */
+
+Dialog.prototype.render = function(options){
+  var el = this.el
+    , title = options.title
+    , msg = options.message
+    , self = this;
+
+  el.find('.close').click(function(){
+    self.emit('close');
+    self.hide();
+    return false;
+  });
+
+  el.find('.title').text(title);
+  if (!title) el.find('.title').remove();
+
+  // message
+  if ('string' == typeof msg) {
+    el.find('p').text(msg);
+  } else if (msg) {
+    el.find('p').replaceWith(msg.el || msg);
+  }
+
+  setTimeout(function(){
+    el.removeClass('hide');
+  }, 0);
+};
+
+/**
+ * Enable the dialog close link.
+ *
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.closable = function(){
+  this.el.addClass('closable');
+  return this;
+};
+
+/**
+ * Add class `name`.
+ *
+ * @param {String} name
+ * @return {Dialog}
+ * @api public
+ */
+
+Dialog.prototype.addClass = function(name){
+  this.el.addClass(name);
+  return this;
+};
+
+/**
+ * Set the effect to `type`.
+ *
+ * @param {String} type
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.effect = function(type){
+  this._effect = type;
+  this.addClass(type);
+  return this;
+};
+
+/**
+ * Make it modal!
+ *
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.modal = function(){
+  this._overlay = overlay();
+  return this;
+};
+
+/**
+ * Add an overlay.
+ *
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.overlay = function(){
+  var self = this;
+  var o = overlay({ closable: true });
+  o.on('hide', function(){
+    self._overlay = null;
+    self.hide();
+  });
+  this._overlay = o;
+  return this;
+};
+
+/**
+ * Close the dialog when the escape key is pressed.
+ *
+ * @api private
+ */
+
+Dialog.prototype.escapable = function(){
+  var self = this;
+  o(document).bind('keydown.dialog', function(e){
+    if (27 != e.which) return;
+    self.emit('escape');
+  });
+};
+
+/**
+ * Show the dialog.
+ *
+ * Emits "show" event.
+ *
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.show = function(){
+  var overlay = this._overlay;
+
+  // overlay
+  if (overlay) {
+    overlay.show();
+    this.el.addClass('modal');
+  }
+
+  // escape
+  if (!overlay || overlay.closable) this.escapable();
+
+  // position
+  this.el.appendTo('body');
+  this.el.css({ marginLeft: -(this.el.width() / 2) + 'px' });
+
+  this.emit('show');
+  return this;
+};
+
+/**
+ * Hide the overlay.
+ *
+ * @api private
+ */
+
+Dialog.prototype.hideOverlay = function(){
+  if (!this._overlay) return;
+  this._overlay.remove();
+  this._overlay = null;
+};
+
+/**
+ * Hide the dialog with optional delay of `ms`,
+ * otherwise the dialog is removed immediately.
+ *
+ * Emits "hide" event.
+ *
+ * @return {Number} ms
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.hide = function(ms){
+  var self = this;
+  o(document).unbind('keydown.dialog');
+
+  // prevent thrashing
+  this.hiding = true;
+
+  // duration
+  if (ms) {
+    setTimeout(function(){
+      self.hide();
+    }, ms);
+    return this;
+  }
+
+  // hide / remove
+  this.el.addClass('hide');
+  if (this._effect) {
+    setTimeout(function(){
+      self.remove();
+    }, 500);
+  } else {
+    self.remove();
+  }
+
+  // overlay
+  this.hideOverlay();
+
+  return this;
+};
+/**
+ * Hide the dialog without potential animation.
+ *
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.remove = function(){
+  this.emit('hide');
+  this.el.remove();
+  return this;
+};
+
+});
+require.register("component-dialog/template.js", function(exports, require, module){
+module.exports = '<div id="dialog" class="hide">\n  <div class="content">\n    <span class="title">Title</span>\n    <a href="#" class="close">× <em>close</em></a>\n    <div class="body">\n      <p>Message</p>\n    </div>\n  </div>\n</div>';
+});
+require.register("component-inherit/index.js", function(exports, require, module){
+
+module.exports = function(a, b){
+  var fn = function(){};
+  fn.prototype = b.prototype;
+  a.prototype = new fn;
+  a.prototype.constructor = a;
+};
+});
+require.register("component-overlay/index.js", function(exports, require, module){
+
+/**
+ * Module dependencies.
+ */
+
+var Emitter = require('emitter')
+  , inherit = require('inherit')
+  , o = require('jquery');
+
+/**
+ * Expose `overlay()`.
+ */
+
+exports = module.exports = overlay;
+
+/**
+ * Expose `Overlay`.
+ */
+
+exports.Overlay = Overlay;
+
+/**
+ * Return a new `Overlay` with the given `options`.
+ *
+ * @param {Object} options
+ * @return {Overlay}
+ * @api public
+ */
+
+function overlay(options){
+  return new Overlay(options);
+};
+
+/**
+ * Initialize a new `Overlay`.
+ *
+ * @param {Object} options
+ * @api public
+ */
+
+function Overlay(options) {
+  Emitter.call(this);
+  options = options || {};
+  this.closable = options.closable;
+  this.el = o(require('./template'));
+  this.el.appendTo('body');
+  if (this.closable) this.el.click(this.hide.bind(this));
+}
+
+/**
+ * Inherits from `Emitter.prototype`.
+ */
+
+inherit(Overlay, Emitter);
+
+/**
+ * Show the overlay.
+ *
+ * Emits "show" event.
+ *
+ * @return {Overlay} 
+ * @api public
+ */
+
+Overlay.prototype.show = function(){
+  this.emit('show');
+  this.el.removeClass('hide');
+  return this;
+};
+
+/**
+ * Hide the overlay.
+ *
+ * Emits "hide" event.
+ *
+ * @return {Overlay}
+ * @api public
+ */
+
+Overlay.prototype.hide = function(){
+  this.emit('hide');
+  return this.remove();
+};
+
+/**
+ * Hide the overlay without emitting "hide".
+ *
+ * Emits "close" event.
+ *
+ * @return {Overlay}
+ * @api public
+ */
+
+Overlay.prototype.remove = function(){
+  var self = this;
+  this.emit('close');
+  this.el.addClass('hide');
+  setTimeout(function(){
+    self.el.remove();
+  }, 2000);
+  return this;
+};
+
+
+});
+require.register("component-overlay/template.js", function(exports, require, module){
+module.exports = '<div id="overlay" class="hide"></div>';
+});
 require.register("ttoploader/public/javascripts/ttoploader.js", function(exports, require, module){
 
 /**
  * Module dependencies.
  */
-var Dropload = require('dropload');
-var $ = require('jquery');
+var Dropload = require('dropload')
+	, $ = require('jquery')
+	, ejs = require('ejs')
+	, dialog = require('dialog');
 
-
-/**
- * App.
- */
-
+ /* Dropload
+--------------------------------------------------------------------------------------------------*/
 var drop = Dropload(document.getElementById('drop'));
 
 drop.on('error', function(err){
@@ -10657,11 +13259,25 @@ drop.on('error', function(err){
 drop.on('upload', function(upload){
 	
 	console.log('uploading %s', upload.file.name);
-	upload.to('/upload');
+
+	var uploadDialog = dialog("uploading...").modal().show();
 
 	upload.on('progress', function(e){
 		console.log( e );
 	});
+
+    upload.on('end', function(res){
+    	uploadDialog.hide();
+
+    	var resJson = $.parseJSON( res.responseText );
+    	POSTS.appendPost(resJson.post);
+    	POSTS.scrollToLastPost();
+    });
+
+    upload.on('load', function () {
+    });
+
+	upload.to('/upload');
 
 });
 
@@ -10678,9 +13294,48 @@ drop.on('html', function(str){
 });
 
 
+
+ /* POSTS
+--------------------------------------------------------------------------------------------------*/
+POSTS = {
+
+	init: function (postsData) {
+		POSTS.renderPosts(postsData);
+	},
+
+	getElement: function () {
+		return $('div#posts');
+	},
+
+	appendPost: function(postData) {
+		ejs.render('/templates/postTemplate', postData, function(err, html) {
+		    POSTS.getElement().append( html );
+		});
+	},
+
+	renderPosts: function(postsData) {
+		postsData.forEach( function (post) {
+			POSTS.appendPost( post );
+		});
+	},
+
+	scrollToLastPost : function (post) {
+		// if ( $(getLastElement()).offset().top > $(window).scrollTop() ) {
+			// console.log($('.post').last());
+
+			$('html, body').animate({scrollTop: $('.post').last().offset().top + $('.post').last().height() }, 100);
+		// }
+	}
+}
+
+
+ /* window on load
+--------------------------------------------------------------------------------------------------*/
 $(function() {
 
+	POSTS.init( postsDataInit );
 	console.log("ready!");
+
 });
 
 });
@@ -10699,23 +13354,110 @@ require.alias("component-event/index.js", "component-events/deps/event/index.js"
 
 require.alias("component-event-manager/index.js", "component-events/deps/event-manager/index.js");
 
-require.alias("component-dropload/index.js", "ttoploader/deps/dropload/index.js");
-require.alias("component-emitter/index.js", "component-dropload/deps/emitter/index.js");
+require.alias("component-jquery/index.js", "ttoploader/deps/jquery/index.js");
+
+
+
+require.alias("btknorr-ejs//client.js", "ttoploader/deps/ejs/client.js");
+require.alias("btknorr-ejs//ejs.js", "ttoploader/deps/ejs/ejs.js");
+require.alias("btknorr-ejs//client.js", "ttoploader/deps/ejs/index.js");
+require.alias("gamestop-superagent/lib/client.js", "btknorr-ejs//deps/superagent/lib/client.js");
+require.alias("gamestop-superagent/lib/client.js", "btknorr-ejs//deps/superagent/index.js");
+require.alias("component-emitter/index.js", "gamestop-superagent/deps/emitter/index.js");
 require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
 
-require.alias("component-classes/index.js", "component-dropload/deps/classes/index.js");
+require.alias("gamestop-superagent/lib/client.js", "gamestop-superagent/index.js");
+
+require.alias("component-domify/index.js", "btknorr-ejs//deps/domify/index.js");
+
+require.alias("btknorr-ejs//client.js", "btknorr-ejs//index.js");
+
+require.alias("btknorr-ejs/client.js", "ttoploader/deps/ejs/client.js");
+require.alias("btknorr-ejs/ejs.js", "ttoploader/deps/ejs/ejs.js");
+require.alias("btknorr-ejs/client.js", "ttoploader/deps/ejs/index.js");
+require.alias("gamestop-superagent/lib/client.js", "btknorr-ejs/deps/superagent/lib/client.js");
+require.alias("gamestop-superagent/lib/client.js", "btknorr-ejs/deps/superagent/index.js");
+require.alias("component-emitter/index.js", "gamestop-superagent/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
+
+require.alias("gamestop-superagent/lib/client.js", "gamestop-superagent/index.js");
+
+require.alias("component-domify/index.js", "btknorr-ejs/deps/domify/index.js");
+
+require.alias("btknorr-ejs/client.js", "btknorr-ejs/index.js");
+
+require.alias("thomastraum-dropload/index.js", "ttoploader/deps/dropload/index.js");
+require.alias("component-emitter/index.js", "thomastraum-dropload/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
+
+require.alias("component-classes/index.js", "thomastraum-dropload/deps/classes/index.js");
 require.alias("component-indexof/index.js", "component-classes/deps/indexof/index.js");
 
-require.alias("component-upload/index.js", "component-dropload/deps/upload/index.js");
+require.alias("component-upload/index.js", "thomastraum-dropload/deps/upload/index.js");
 require.alias("component-emitter/index.js", "component-upload/deps/emitter/index.js");
 require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
 
-require.alias("component-events/index.js", "component-dropload/deps/events/index.js");
+require.alias("component-events/index.js", "thomastraum-dropload/deps/events/index.js");
 require.alias("component-event/index.js", "component-events/deps/event/index.js");
 
 require.alias("component-event-manager/index.js", "component-events/deps/event-manager/index.js");
 
-require.alias("component-jquery/index.js", "ttoploader/deps/jquery/index.js");
+require.alias("component-dialog/index.js", "thomastraum-dropload/deps/dialog/index.js");
+require.alias("component-dialog/template.js", "thomastraum-dropload/deps/dialog/template.js");
+require.alias("component-emitter/index.js", "component-dialog/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
+
+require.alias("component-jquery/index.js", "component-dialog/deps/jquery/index.js");
+
+require.alias("component-overlay/index.js", "component-dialog/deps/overlay/index.js");
+require.alias("component-overlay/template.js", "component-dialog/deps/overlay/template.js");
+require.alias("component-emitter/index.js", "component-overlay/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
+
+require.alias("component-inherit/index.js", "component-overlay/deps/inherit/index.js");
+
+require.alias("component-jquery/index.js", "component-overlay/deps/jquery/index.js");
+
+require.alias("component-dialog/index.js", "ttoploader/deps/dialog/index.js");
+require.alias("component-dialog/template.js", "ttoploader/deps/dialog/template.js");
+require.alias("component-emitter/index.js", "component-dialog/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
+
+require.alias("component-jquery/index.js", "component-dialog/deps/jquery/index.js");
+
+require.alias("component-overlay/index.js", "component-dialog/deps/overlay/index.js");
+require.alias("component-overlay/template.js", "component-dialog/deps/overlay/template.js");
+require.alias("component-emitter/index.js", "component-overlay/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
+
+require.alias("component-inherit/index.js", "component-overlay/deps/inherit/index.js");
+
+require.alias("component-jquery/index.js", "component-overlay/deps/jquery/index.js");
+
+require.alias("component-dialog/index.js", "ttoploader/deps/dialog/index.js");
+require.alias("component-dialog/template.js", "ttoploader/deps/dialog/template.js");
+require.alias("component-emitter/index.js", "component-dialog/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
+
+require.alias("component-jquery/index.js", "component-dialog/deps/jquery/index.js");
+
+require.alias("component-overlay/index.js", "component-dialog/deps/overlay/index.js");
+require.alias("component-overlay/template.js", "component-dialog/deps/overlay/template.js");
+require.alias("component-emitter/index.js", "component-overlay/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
+
+require.alias("component-inherit/index.js", "component-overlay/deps/inherit/index.js");
+
+require.alias("component-jquery/index.js", "component-overlay/deps/jquery/index.js");
+
+require.alias("component-overlay/index.js", "ttoploader/deps/overlay/index.js");
+require.alias("component-overlay/template.js", "ttoploader/deps/overlay/template.js");
+require.alias("component-emitter/index.js", "component-overlay/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
+
+require.alias("component-inherit/index.js", "component-overlay/deps/inherit/index.js");
+
+require.alias("component-jquery/index.js", "component-overlay/deps/jquery/index.js");
 
 require.alias("ttoploader/public/javascripts/ttoploader.js", "ttoploader/index.js");
 

@@ -1,0 +1,23 @@
+{
+  "name": "overlay",
+  "description": "Overlay component",
+  "version": "0.0.4",
+  "keywords": [
+    "overlay",
+    "ui"
+  ],
+  "dependencies": {
+    "component/emitter": "*",
+    "component/inherit": "*",
+    "component/jquery": "*"
+  },
+  "scripts": [
+    "index.js",
+    "template.js"
+  ],
+  "styles": [
+    "overlay.css"
+  ],
+  "license": "MIT",
+  "repo": "https://raw.github.com/component/overlay"
+}

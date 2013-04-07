@@ -2,14 +2,13 @@
 /**
  * Module dependencies.
  */
-var Dropload = require('dropload');
-var $ = require('jquery');
+var Dropload = require('dropload')
+	, $ = require('jquery')
+	, ejs = require('ejs')
+	, dialog = require('dialog');
 
-
-/**
- * App.
- */
-
+ /* Dropload
+--------------------------------------------------------------------------------------------------*/
 var drop = Dropload(document.getElementById('drop'));
 
 drop.on('error', function(err){
@@ -20,14 +19,24 @@ drop.on('upload', function(upload){
 	
 	console.log('uploading %s', upload.file.name);
 
+	var uploadDialog = dialog("uploading...").modal().show();
+
 	upload.on('progress', function(e){
 		console.log( e );
 	});
 
     upload.on('end', function(res){
-		assert(200 == res.status, '200 response');
-		done();
+    	uploadDialog.hide();
+
+    	var resJson = $.parseJSON( res.responseText );
+    	POSTS.appendPost(resJson.post);
+    	POSTS.scrollToLastPost();
     });
+
+    upload.on('load', function () {
+    });
+
+	upload.to('/upload');
 
 });
 
@@ -44,7 +53,46 @@ drop.on('html', function(str){
 });
 
 
+
+ /* POSTS
+--------------------------------------------------------------------------------------------------*/
+POSTS = {
+
+	init: function (postsData) {
+		POSTS.renderPosts(postsData);
+	},
+
+	getElement: function () {
+		return $('div#posts');
+	},
+
+	appendPost: function(postData) {
+		ejs.render('/templates/postTemplate', postData, function(err, html) {
+		    POSTS.getElement().append( html );
+		});
+	},
+
+	renderPosts: function(postsData) {
+		postsData.forEach( function (post) {
+			POSTS.appendPost( post );
+		});
+	},
+
+	scrollToLastPost : function (post) {
+		// if ( $(getLastElement()).offset().top > $(window).scrollTop() ) {
+			// console.log($('.post').last());
+
+			$('html, body').animate({scrollTop: $('.post').last().offset().top + $('.post').last().height() }, 100);
+		// }
+	}
+}
+
+
+ /* window on load
+--------------------------------------------------------------------------------------------------*/
 $(function() {
 
+	POSTS.init( postsDataInit );
 	console.log("ready!");
+
 });
